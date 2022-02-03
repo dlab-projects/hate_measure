@@ -265,7 +265,7 @@ class TargetIdentityClassifierUSE(Model):
     dropout_rate : float
         The dropout rate applied to the dense layer.
     """
-    def __init__(self, version='roberta-base', n_dense=64, dropout_rate=0.1):
+    def __init__(self, version='v4', n_dense=64, dropout_rate=0.1):
         super(TargetIdentityClassifierUSE, self).__init__()
         # Instantiate a fresh USE
         self.version = version
@@ -279,12 +279,11 @@ class TargetIdentityClassifierUSE(Model):
     def build_model(cls, version='v4', n_dense=64, dropout_rate=0.1):
         """Builds a model using the Functional API."""
         text = tf.keras.Input((), dtype=tf.string, name='input_text')
-        severity = Input(shape=(1,), name='severity')
         network = cls(version=version,
                       n_dense=n_dense,
                       dropout_rate=dropout_rate)
-        outputs = network.call(inputs=[text, severity])
-        model = Model(inputs=[text, severity], outputs=outputs)
+        outputs = network.call(inputs=text)
+        model = Model(inputs=text, outputs=outputs)
         return model
 
     def call(self, inputs):
@@ -292,15 +291,11 @@ class TargetIdentityClassifierUSE(Model):
         entries being the transformer input, and the third entry as the
         severity.
         """
-        # Separate input
-        severity = inputs[1]
         # Apply transformer and get classifier output
-        x = self.USE(inputs[0])
+        x = self.USE(inputs)
         # Apply dense layer with dropout
         x = self.dense(x)
         x = self.dropout(x)
-        # Incorporate severity input
-        x = concatenate([x, severity])
         # Target identity prediction
         x = self.target_identity(x)
         return x

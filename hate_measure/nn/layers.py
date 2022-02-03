@@ -77,32 +77,30 @@ class HateConstructLayer(Layer):
 class TargetIdentityLayer(Layer):
     """Maps input to target identity prediction.
 
-    This layer includes the prediction of race, religion, national origin,
-    gender, sexual orientation, age, disability, and an 'other' label which
-    captures cases in which they might not be a clear target identity.
+    This layer includes the prediction of age, disability, gender, sexuality,
+    national origin, politics, race, and religion.
     """
     def __init__(self, name='target_identity_classification', **kwargs):
         super(TargetIdentityLayer, self).__init__(name=name, **kwargs)
-        self.race = Dense(2, activation='softmax', name='race')
-        self.religion = Dense(2, activation='softmax', name='religion')
-        self.national_origin = Dense(2, activation='softmax', name='national_origin')
-        self.gender = Dense(2, activation='softmax', name='gender')
-        self.sexual_orientation = Dense(2, activation='softmax', name='sexual_orientation')
-        self.age = Dense(2, activation='softmax', name='age')
-        self.disability = Dense(2, activation='softmax', name='disability')
-        self.other = Dense(2, activation='softmax', name='other')
+        self.age = Dense(1, activation='sigmoid', name='age')
+        self.disability = Dense(1, activation='sigmoid', name='disability')
+        self.gender = Dense(1, activation='sigmoid', name='gender')
+        self.origin = Dense(1, activation='sigmoid', name='origin')
+        self.politics = Dense(1, activation='sigmoid', name='politics')
+        self.race = Dense(1, activation='sigmoid', name='race')
+        self.religion = Dense(1, activation='sigmoid', name='religion')
+        self.sexuality = Dense(1, activation='sigmoid', name='sexuality')
 
     def call(self, inputs):
         outputs = [
-            self.race(inputs),
-            self.religion(inputs),
-            self.national_origin(inputs),
-            self.gender(inputs),
-            self.sexual_orientation(inputs),
             self.age(inputs),
             self.disability(inputs),
-            self.other(inputs),
-        ]
+            self.gender(inputs),
+            self.origin(inputs),
+            self.politics(inputs),
+            self.race(inputs),
+            self.religion(inputs),
+            self.sexuality(inputs)]
         return outputs
 
     def get_config(self):
