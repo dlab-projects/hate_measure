@@ -184,10 +184,12 @@ class TargetIdentityClassifier(Model):
         The dropout rate applied to the dense layer.
     """
     def __init__(self, transformer='roberta-base', n_dense=64, dropout_rate=0.1):
-        super(ConstructClassifierSeverity, self).__init__()
+        super(TargetIdentityClassifier, self).__init__()
         # Instantiate a fresh transformer if provided the correct string.
         if transformer == 'roberta-base' or transformer == 'roberta-large':
             self.transformer = transformers.TFRobertaModel.from_pretrained(transformer)
+        elif transformer == 'distilbert-base-uncased':
+            self.transformer = transformers.TFDistilBertModel.from_pretrained(transformer)
         else:
             # Otherwise, assume a transformer has been provided
             self.transformer = transformer
@@ -208,12 +210,11 @@ class TargetIdentityClassifier(Model):
         attention_mask = Input(shape=(max_length,),
                                dtype=tf.int32,
                                name='attention_mask')
-        severity = Input(shape=(1,), name='severity')
         network = cls(transformer=transformer,
                       n_dense=n_dense,
                       dropout_rate=dropout_rate)
-        outputs = network.call(inputs=[input_ids, attention_mask, severity])
-        model = Model(inputs=[input_ids, attention_mask, severity],
+        outputs = network.call(inputs=[input_ids, attention_mask])
+        model = Model(inputs=[input_ids, attention_mask],
                       outputs=outputs)
         return model
 
@@ -222,22 +223,20 @@ class TargetIdentityClassifier(Model):
         entries being the transformer input, and the third entry as the
         severity.
         """
-        # Separate input
-        severity = inputs[2]
+        input_ids = inputs[0]
+        attention_mask = inputs[1]
         # Apply transformer and get classifier output
-        x = self.transformer([inputs[0], inputs[1]])
+        x = self.transformer(input_ids, attention_mask)
         x = GlobalAveragePooling1D()(x.last_hidden_state)
         # Apply dense layer with dropout
         x = self.dense(x)
         x = self.dropout(x)
-        # Incorporate severity input
-        x = concatenate([x, severity])
         # Target identity prediction
         x = self.target_identity(x)
         return x
 
     def get_config(self):
-        return {'transformer': self.transformer_input,
+        return {'transformer': self.transformer_config,
                 'n_dense': self.dense.units,
                 'dropout_rate': self.dropout.rate}
 
