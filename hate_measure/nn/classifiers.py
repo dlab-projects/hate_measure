@@ -191,6 +191,7 @@ class TargetIdentityClassifier(Model):
     ):
         super(TargetIdentityClassifier, self).__init__()
         # Instantiate a fresh transformer if provided the correct string.
+        self.transformer_name = transformer
         if transformer == 'roberta-base' or transformer == 'roberta-large':
             self.transformer = transformers.TFRobertaModel.from_pretrained(transformer)
         elif transformer == 'bert-base-uncased':
@@ -199,6 +200,7 @@ class TargetIdentityClassifier(Model):
             self.transformer = transformers.TFDistilBertModel.from_pretrained(transformer)
         else:
             # Otherwise, assume a transformer has been provided
+            self.transformer_name = 'custom'
             self.transformer = transformer
         # Transformer input saved for config
         self.transformer_config = transformer
@@ -241,7 +243,12 @@ class TargetIdentityClassifier(Model):
         input_ids = inputs[0]
         attention_mask = inputs[1]
         # Apply transformer and get classifier output
-        x = self.transformer(input_ids, attention_mask)
+        if self.transformer_name == 'distilbert-base-uncased':
+            x = self.transformer.distilbert(input_ids, attention_mask)
+        elif self.transformer_name == 'bert-base-uncased':
+            x = self.transformer.bert(input_ids, attention_mask)
+        elif (self.transformer_name == 'roberta-base') or (self.transformer_name == 'roberta-large'):
+            x = self.transformer.roberta(input_ids, attention_mask)
         # Perform pooling
         if self.pooling == 'max' and self.mask_pool:
             mask = tf.cast(tf.expand_dims(attention_mask, axis=-1), 'float32')
