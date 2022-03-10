@@ -10,7 +10,7 @@ from tensorflow.keras.layers import (Dense,
                                      Input,
                                      concatenate)
 
-from .layers import HateConstructLayer, TargetIdentityLayer
+from .layers import HateConstructLayer, TargetIdentityLayer, MultiBinaryLayer
 from ..utils import initialize_use_layer
 
 
@@ -160,6 +160,122 @@ class ConstructClassifierUSE(Model):
         return {'version': self.version,
                 'n_dense': self.dense.units,
                 'dropout_rate': self.dropout.rate}
+
+
+class MultiBinaryClassifier(Model):
+    """Classifies multiple binary outputs of text input.
+
+    This model stacks a dense layer on top of an input transformer model (e.g.,
+    RoBERTa), followed by a multi-output classification layer. See the
+    `MultiBinaryLayer` layer for details on the endpoint of this model.
+
+    Parameters
+    ----------
+    outputs : list
+        A list of the output names. The length of this list determines the
+        number of outputs in the classifier.
+    transformer : transformers.models
+        Transformer model serving as the input.
+    n_dense : int
+        The number of feedforward units after the transformer model.
+    dropout_rate : float
+        The dropout rate applied to the dense layer.
+    pooling : string
+        The type of pooling to use after the transformer: 'max' or 'mean'.
+    mask_pool : bool
+        Whether to mask the transformer output during pooling using the
+        attention mask.
+    """
+    def __init__(
+        self, outputs, transformer='roberta-base', n_dense=64, dropout_rate=0.1,
+        pooling='max', mask_pool=True
+    ):
+        super(MultiBinaryClassifier, self).__init__()
+        self.outputs = outputs
+        # Instantiate a fresh transformer if provided the correct string.
+        self.transformer_name = transformer
+        if transformer == 'roberta-base' or transformer == 'roberta-large':
+            self.transformer = transformers.TFRobertaModel.from_pretrained(transformer)
+        elif transformer == 'bert-base-uncased':
+            self.transformer = transformers.TFBertModel.from_pretrained(transformer)
+        elif transformer == 'distilbert-base-uncased':
+            self.transformer = transformers.TFDistilBertModel.from_pretrained(transformer)
+        else:
+            # Otherwise, assume a transformer has been provided
+            self.transformer_name = 'custom'
+            self.transformer = transformer
+        # Transformer input saved for config
+        self.transformer_config = transformer
+        self.n_dense = n_dense
+        self.dense = Dense(n_dense, activation='relu')
+        self.dropout = Dropout(dropout_rate)
+        self.pooling = pooling
+        self.mask_pool = mask_pool
+        if self.pooling == 'max':
+            self.pool = GlobalMaxPooling1D()
+        elif self.pooling == 'mean':
+            self.pool = GlobalAveragePooling1D()
+        self.multi_binary = MultiBinaryLayer(output_names=outputs)
+
+    @classmethod
+    def build_model(cls, outputs, transformer='roberta-base', max_length=512,
+                    n_dense=64, dropout_rate=0.1, pooling='max',
+                    mask_pool=True):
+        """Builds a model using the Functional API."""
+        input_ids = Input(shape=(max_length,),
+                          dtype=tf.int32,
+                          name='input_ids')
+        attention_mask = Input(shape=(max_length,),
+                               dtype=tf.int32,
+                               name='attention_mask')
+        network = cls(outputs=outputs,
+                      transformer=transformer,
+                      n_dense=n_dense,
+                      dropout_rate=dropout_rate,
+                      pooling=pooling,
+                      mask_pool=mask_pool)
+        outputs = network.call(inputs=[input_ids, attention_mask])
+        model = Model(inputs=[input_ids, attention_mask],
+                      outputs=outputs)
+        return model
+
+    def call(self, inputs):
+        """Forward pass. Inputs must be a list of length 3, with the first two
+        entries being the transformer input, and the third entry as the
+        severity.
+        """
+        input_ids = inputs[0]
+        attention_mask = inputs[1]
+        # Apply transformer and get classifier output
+        if self.transformer_name == 'distilbert-base-uncased':
+            x = self.transformer.distilbert(input_ids, attention_mask)
+        elif self.transformer_name == 'bert-base-uncased':
+            x = self.transformer.bert(input_ids, attention_mask)
+        elif (self.transformer_name == 'roberta-base') or (self.transformer_name == 'roberta-large'):
+            x = self.transformer.roberta(input_ids, attention_mask)
+        # Perform pooling
+        if self.pooling == 'max' and self.mask_pool:
+            mask = tf.cast(tf.expand_dims(attention_mask, axis=-1), 'float32')
+            mask_sum = tf.cast(tf.math.reduce_sum(attention_mask, axis=-1, keepdims=True), 'float32')
+            x = tf.math.reduce_sum(
+                x.last_hidden_state * mask,
+                axis=1) / mask_sum
+        elif self.pooling == 'mean' and self.mask_pool:
+            x = self.pool(x.last_hidden_state, mask=attention_mask)
+        else:
+            x = self.pool(x.last_hidden_state)
+        # Apply dense layer with dropout
+        x = self.dense(x)
+        x = self.dropout(x)
+        # Target identity prediction
+        x = self.multi_binary(x)
+        return x
+
+    def get_config(self):
+        return {'transformer': self.transformer_config,
+                'n_dense': self.dense.units,
+                'dropout_rate': self.dropout.rate,
+                'outputs': self.outputs}
 
 
 class TargetIdentityClassifier(Model):

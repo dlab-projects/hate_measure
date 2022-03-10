@@ -1,6 +1,30 @@
 from tensorflow.keras.layers import Dense, Layer
 
 
+class MultiBinaryLayer(Layer):
+    """Maps input to multiple binary outcomes.
+
+    Parameters
+    ----------
+    output_names : list
+        The names of the outputs. The length of this list determines the
+        number of outputs in the layer.
+    """
+    def __init__(self, output_names, name='multi_binary', **kwargs):
+        super(MultiBinaryLayer, self).__init__(name=name, **kwargs)
+        self.output_names = output_names
+        self.outputs = [Dense(1, activation='sigmoid', name=output_name)
+                        for output_name in output_names]
+
+    def call(self, inputs):
+        outputs = [output(inputs) for output in self.outputs]
+        return outputs
+
+    def get_config(self):
+        return {'name': self.name,
+                'output_names': self.output_names}
+
+
 class HateConstructLayer(Layer):
     """Maps input to multi-output categorical layers corresponding to the
     hate speech construct, as determined by survey item responses.
