@@ -1,12 +1,39 @@
 import numpy as np
 import tensorflow_hub as hub
 
+from .keys import items as item_names
 from sklearn.model_selection import (KFold,
                                      GroupKFold,
                                      ShuffleSplit,
                                      GroupShuffleSplit,
                                      train_test_split)
 from tensorflow.keras.optimizers import Adam
+
+
+def recode_responses(
+    data, items=None, sentiment={}, respect={}, insult={}, humiliate={},
+    status={}, dehumanize={}, violence={}, genocide={}, attack_defend={},
+    hatespeech={}
+):
+    """Recodes the item responses.
+    Parameters
+    ----------
+    data : pd.DataFrame
+        Hate speech dataset.
+    items : dict of dicts
+        A dict whose keys must be the item names, and whose values are additional
+        dicts containing the recoding. If this is not provided, it is created
+        from the remaining arguments.
+    sentiment, respect, insult, humiliate, status, dehumanize, violence, genocide,
+    attack_defend, hatespeech : dict
+        The recoding for each hate speech item as a dict, with keys denoting
+        the values to replace, and values denoting what to replace them with.
+    """
+    if items is None:
+        items = dict(zip(item_names,
+                         [sentiment, respect, insult, humiliate, status,
+                          dehumanize, violence, genocide, attack_defend, hatespeech]))
+    return data.replace(items)
 
 
 def accuracy_by_chance(p_train, p_test):
