@@ -15,7 +15,7 @@ item_labels = [
     "Sentiment",
     "Respect",
     "Insult",
-    "Humialiate",
+    "Humiliate",
     "Status",
     "Dehumanize",
     "Violence",
