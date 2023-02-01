@@ -3,24 +3,24 @@ items = [
     "sentiment",
     "respect",
     "insult",
+    "attack_defend",
     "humiliate",
     "status",
     "dehumanize",
     "violence",
     "genocide",
-    "attack_defend",
     "hatespeech"]
 
 item_labels = [
     "Sentiment",
     "Respect",
     "Insult",
+    "Attack/Defend",
     "Humiliate",
     "Status",
     "Dehumanize",
     "Violence",
     "Genocide",
-    "Attack/Defend",
     "Hate Speech"]
 
 """
