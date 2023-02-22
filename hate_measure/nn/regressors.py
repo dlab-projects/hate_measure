@@ -7,7 +7,6 @@ from tensorflow.keras.layers import (Dense,
                                      Dropout,
                                      GlobalAveragePooling1D,
                                      Input)
-from ..utils import initialize_use_layer
 
 
 class HateSpeechMeasurer(Model):
@@ -34,10 +33,18 @@ class HateSpeechMeasurer(Model):
     def __init__(self, transformer='roberta-base', n_dense=64, dropout_rate=0.1):
         super(HateSpeechMeasurer, self).__init__()
         # Instantiate a fresh transformer if provided the correct string.
+        self.transformer_name = transformer
         if transformer == 'roberta-base' or transformer == 'roberta-large':
             self.transformer = transformers.TFRobertaModel.from_pretrained(transformer)
+        elif transformer == 'bert-base-uncased':
+            self.transformer = transformers.TFBertModel.from_pretrained(transformer)
+        elif transformer == 'distilbert-base-uncased':
+            self.transformer = transformers.TFDistilBertModel.from_pretrained(transformer)
+        elif isinstance(transformer, str):
+            raise ValueError(f'Transformer {transformer} not available.')
         else:
             # Otherwise, assume a transformer has been provided
+            self.transformer_name = 'custom'
             self.transformer = transformer
         # Transformer input saved for config
         self.transformer_config = transformer
@@ -73,7 +80,12 @@ class HateSpeechMeasurer(Model):
         input_ids = inputs[0]
         attention_mask = inputs[1]
         # Apply transformer and get classifier output
-        x = self.transformer.roberta(input_ids, attention_mask)
+        if self.transformer_name == 'distilbert-base-uncased':
+            x = self.transformer.distilbert(input_ids, attention_mask)
+        elif self.transformer_name == 'bert-base-uncased':
+            x = self.transformer.bert(input_ids, attention_mask)
+        elif (self.transformer_name == 'roberta-base') or (self.transformer_name == 'roberta-large'):
+            x = self.transformer.roberta(input_ids, attention_mask)
         x = GlobalAveragePooling1D()(x.last_hidden_state)
         # Apply dense layer with dropout
         x = self.dense(x)
