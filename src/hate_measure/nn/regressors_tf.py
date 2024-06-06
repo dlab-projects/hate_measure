@@ -1,4 +1,3 @@
-import numpy as np
 import tensorflow as tf
 import transformers
 
@@ -8,8 +7,7 @@ from tensorflow.keras.layers import (Dense,
                                      GlobalAveragePooling1D,
                                      Input)
 
-
-class HateSpeechMeasurer(Model):
+class HateSpeechMeasurerTF(Model):
     """Measures the hatefulness of input text.
 
     This model stacks a dense layer on top of an input transformer model (e.g.,
@@ -31,7 +29,7 @@ class HateSpeechMeasurer(Model):
         The dropout rate applied to the dense layer.
     """
     def __init__(self, transformer='roberta-base', n_dense=64, dropout_rate=0.1):
-        super(HateSpeechMeasurer, self).__init__()
+        super(HateSpeechMeasurerTF, self).__init__()
         # Instantiate a fresh transformer if provided the correct string.
         self.transformer_name = transformer
         if transformer == 'roberta-base' or transformer == 'roberta-large':
