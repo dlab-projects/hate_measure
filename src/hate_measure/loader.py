@@ -53,7 +53,11 @@ class MeasuringHateSpeechGeneric(Dataset):
                 examples[self.text_col], truncation=True, padding="max_length"
             )
 
-        df = pd.read_csv(self.path)
+        if self.path.endswith('.csv'):
+            df = pd.read_csv(self.path)
+        elif self.path.endswith('.feather'):
+            df = pd.read_feather(self.path)
+
         data = datasets.Dataset.from_pandas(df)
         tokenized = data.map(tokenize_function, batched=True)
         self.input_ids = tokenized['input_ids']
