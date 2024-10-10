@@ -28,7 +28,7 @@ def run(config):
 
     # Model
     model = HateSpeechMeasurer(config, tokenizer)
-    logger = TensorBoardLogger("logs", name="mhs_version2")
+    logger = TensorBoardLogger("logs", name="mhs_version")
     # Trainer
     trainer = L.Trainer(
         accelerator="cuda",
@@ -47,7 +47,7 @@ if __name__ == "__main__":
         'base': 'roberta-large',
         'n_dense': 256,
         'dropout_rate': 0.1,
-        'lr': 2e-5,
+        'lr': 2e-6,
         'epoch': 3,
         'accumulate_grad_batches': 1,
         'warmup_ratio': 0.1
