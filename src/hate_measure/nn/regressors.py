@@ -1,36 +1,18 @@
 import torch
-
-from pytorch_lightning import LightningModule
 from torch.nn import Dropout, Linear, Module, ReLU
 from transformers import AutoTokenizer, AutoModel
+from hate_measure.utils import masked_average_pooling
 
 
-def masked_average_pooling(hidden_states, attention_mask):
-    """
-    Perform average pooling on the hidden states, taking the attention mask into account.
-
-    Args:
-        hidden_states (torch.Tensor): The hidden states of shape (batch_size, sequence_length, hidden_size).
-        attention_mask (torch.Tensor): The attention mask of shape (batch_size, sequence_length).
-
-    Returns:
-        torch.Tensor: The pooled hidden states of shape (batch_size, hidden_size).
-    """
-    # Apply the attention mask to the hidden states
-    masked_hidden_states = hidden_states * attention_mask.unsqueeze(-1)
-
-    # Sum the hidden states and the mask
-    sum_hidden_states = masked_hidden_states.sum(dim=1)
-    sum_mask = attention_mask.sum(dim=1, keepdim=True)
-
-    # Compute the average hidden states
-    average_hidden_states = sum_hidden_states / sum_mask
-    return average_hidden_states
-
-
-class HateSpeechMeasurerModule(Module):
-    def __init__(self, base='roberta-base', n_dense=128, dropout_rate=0.4):
-        super(HateSpeechMeasurerModule, self).__init__()
+class HateSpeechScorer(Module):
+    def __init__(
+        self, base='AnswerDotAI/ModernBERT-base', n_dense=128, dropout_rate=0.4, max_length=512,
+        padding='max_length', truncation=True
+    ):
+        super(HateSpeechScorer, self).__init__()
+        self.max_length = max_length
+        self.padding = padding
+        self.truncation = truncation
         self.tokenizer = AutoTokenizer.from_pretrained(base)
         self.base_model = AutoModel.from_pretrained(base)
         self.dense_layer = Linear(
@@ -59,7 +41,12 @@ class HateSpeechMeasurerModule(Module):
         return score
 
     def tokenize(self, texts):
-        encoding = self.tokenizer(texts, return_tensors='pt', padding=True, truncation=True)
+        encoding = self.tokenizer(
+            texts, 
+            return_tensors='pt',
+            padding=self.padding, 
+            truncation=self.truncation,
+            max_length=self.max_length)
         return encoding['input_ids'], encoding['attention_mask']
 
     def predict(self, texts):

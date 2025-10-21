@@ -1,55 +1,18 @@
-import lightning as L
-import os
+from hate_measure.train import HateSpeechTrainer, create_default_config
 
-from lightning.pytorch.callbacks import ModelCheckpoint
-from lightning.pytorch.loggers import TensorBoardLogger
-from hate_measure.loader import MeasuringHateSpeechModule
-from hate_measure.nn.lightning import HateSpeechMeasurer
-from transformers import AutoTokenizer
+def main():
+    # Load default config
+    config = create_default_config()
 
+    # Initialize trainer
+    trainer = HateSpeechTrainer(config)
 
-def run(config):
-    os.environ["TOKENIZERS_PARALLELISM"] = "false"
-    TOKENIZER = 'roberta-large'
-    # Tokenizer
-    tokenizer = AutoTokenizer.from_pretrained(TOKENIZER)
-    # DataModule
-    data_module_config = {
-        'batch_size': 8,
-        'tokenizer': TOKENIZER
-    }
-    data_module = MeasuringHateSpeechModule(config=data_module_config)
-    # Callbacks
-    checkpoint_callback = ModelCheckpoint(
-        monitor='train_loss',
-        dirpath='checkpoints',
-        every_n_epochs=1,
-        save_on_train_epoch_end=True)
+    # Prepare data and train
+    trainer.prepare_data()
+    trainer.train()
 
-    # Model
-    model = HateSpeechMeasurer(config, tokenizer)
-    logger = TensorBoardLogger("logs", name="mhs_version")
-    # Trainer
-    trainer = L.Trainer(
-        accelerator="cuda",
-        max_epochs=config['epoch'],
-        devices=1,
-        logger=logger,
-        callbacks=[checkpoint_callback])
-
-
-    # Train the model
-    trainer.fit(model, data_module)
+    # Save final model
+    trainer.save_model("final_hate_speech_model.pt")
 
 if __name__ == "__main__":
-    # Configuration dictionary
-    config = {
-        'base': 'roberta-large',
-        'n_dense': 256,
-        'dropout_rate': 0.1,
-        'lr': 2e-6,
-        'epoch': 3,
-        'accumulate_grad_batches': 1,
-        'warmup_ratio': 0.1
-    }
-    run(config)
+    main()
