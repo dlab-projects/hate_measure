@@ -6,8 +6,8 @@ from hate_measure.utils import masked_average_pooling
 
 class HateSpeechScorer(Module):
     def __init__(
-        self, base='AnswerDotAI/ModernBERT-base', n_dense=128, dropout_rate=0.4, max_length=512,
-        padding='max_length', truncation=True
+        self, base='AnswerDotAI/ModernBERT-base', n_dense=128, dropout_rate=0.4,
+        max_length=512, padding='max_length', truncation=True
     ):
         super(HateSpeechScorer, self).__init__()
         self.max_length = max_length
@@ -42,9 +42,9 @@ class HateSpeechScorer(Module):
 
     def tokenize(self, texts):
         encoding = self.tokenizer(
-            texts, 
+            texts,
             return_tensors='pt',
-            padding=self.padding, 
+            padding=self.padding,
             truncation=self.truncation,
             max_length=self.max_length)
         return encoding['input_ids'], encoding['attention_mask']

@@ -15,7 +15,6 @@ class HateSpeechTrainer:
     """
     Train-only regression trainer for HateSpeechScorer.
     """
-
     def __init__(self, config: dict):
         self.config = config
         self.device = torch.device(
@@ -23,7 +22,6 @@ class HateSpeechTrainer:
             else "mps" if torch.backends.mps.is_available()
             else "cpu"
         )
-
         # Model
         self.model = HateSpeechScorer(
             base=config['base_model'],
@@ -43,9 +41,17 @@ class HateSpeechTrainer:
             betas=config.get('betas', (0.9, 0.999)),
             eps=config.get('eps', 1e-8),
         )
-
         self.train_loader: DataLoader | None = None
         self.scheduler = None
+
+        if config.get('WANDB_API_KEY', None) is not None:
+            import wandb
+            wandb.login(key=config['WANDB_API_KEY'])
+            wandb.init(project="hate-speech-scorer", name="hate-speech-scorer")
+            wandb.config.update(config)
+            self.wandb = wandb
+        else:
+            self.wandb = None
 
     def prepare_data(self):
         """
@@ -96,6 +102,12 @@ class HateSpeechTrainer:
                 self.scheduler.step()
 
             running += loss.item()
+            if self.wandb is not None:
+                self.wandb.log({
+                    'epoch': epoch_idx,
+                    'batch_loss': loss.item(),
+                    'learning_rate': self.scheduler.get_last_lr()[0] if self.scheduler else self.config['lr']
+                })
             pbar.set_postfix(loss=f"{loss.item():.4f}")
 
         return running / len(self.train_loader)
