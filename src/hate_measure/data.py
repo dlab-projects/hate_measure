@@ -17,7 +17,7 @@ class MeasuringHateSpeechDataset(Dataset):
         return {
             "input_ids": self.input_ids[idx],
             "attention_mask": self.attention_mask[idx],
-            "hate_speech_scores": self.scores[idx],
+            "labels": self.scores[idx],
         }
 
     @classmethod
