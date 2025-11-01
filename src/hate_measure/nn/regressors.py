@@ -1,6 +1,6 @@
 import torch
 from torch.nn import Dropout, Linear, Module, ReLU
-from transformers import AutoTokenizer, AutoModel
+from transformers import AutoTokenizer, AutoModel, Pre
 from hate_measure.utils import masked_average_pooling
 
 
