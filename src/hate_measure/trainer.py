@@ -4,11 +4,12 @@ import torch.nn as nn
 
 from torch.optim import AdamW
 from torch.utils.data import DataLoader
-from transformers import get_linear_schedule_with_warmup
+from transformers import AutoTokenizer, get_linear_schedule_with_warmup
 from tqdm import tqdm
 
 from hate_measure.nn.regressors import HateSpeechScorer
 from hate_measure.data import build_measuring_hate_speech_dataset
+from hate_measure.nn.config import HateSpeechScorerConfig
 
 
 class HateSpeechTrainer:
@@ -22,16 +23,14 @@ class HateSpeechTrainer:
             else "mps" if torch.backends.mps.is_available()
             else "cpu"
         )
-        # Model
-        self.model = HateSpeechScorer(
-            base=config['base_model'],
+        hf_config = HateSpeechScorerConfig(
+            encoder_model_name_or_path=config['base_model'],
             n_dense=config.get('n_dense', 128),
             dropout_rate=config.get('dropout_rate', 0.4),
-            max_length=config.get('max_length', 512),
-            padding=config.get('padding', 'max_length'),
-            truncation=config.get('truncation', True),
-        ).to(self.device)
-
+            num_labels=1,
+        )
+        self.model = HateSpeechScorer(hf_config).to(self.device)
+        self.tokenizer = AutoTokenizer.from_pretrained(hf_config.encoder_model_name_or_path)
         # Loss / Optimizer
         self.criterion = nn.MSELoss()
         self.optimizer = AdamW(
@@ -58,7 +57,7 @@ class HateSpeechTrainer:
         Build the training DataLoader via data.py factory and set up the LR scheduler.
         """
         self.train_loader = build_measuring_hate_speech_dataset(
-            tokenizer=self.model.tokenizer,
+            tokenizer=self.tokenizer,
             split=self.config.get('split', 'train'),
             dataset_name=self.config.get('dataset_name', 'ucberkeley-dlab/measuring-hate-speech'),
             target_col=self.config.get('target_col', 'hate_speech_score'),
@@ -124,7 +123,7 @@ class HateSpeechTrainer:
     @torch.no_grad()
     def predict(self, texts):
         self.model.eval()
-        input_ids, attention_mask = self.model.tokenize(texts)
+        input_ids, attention_mask = self.tokenize(texts)
         input_ids = input_ids.to(self.device)
         attention_mask = attention_mask.to(self.device)
         preds = self.model(input_ids, attention_mask).squeeze(-1)
@@ -151,7 +150,7 @@ def create_default_config():
         'weight_decay': 0.01,
         'betas': (0.9, 0.999),
         'eps': 1e-8,
-        'epochs': 3,
+        'epochs': 2,
         'batch_size': 32,
         'n_dense': 128,
         'dropout_rate': 0.4,
