@@ -2,6 +2,11 @@ from transformers import AutoConfig, PretrainedConfig
 
 class HateSpeechScorerConfig(PretrainedConfig):
     model_type = "hate-speech-scorer"
+    auto_map = {
+        "AutoConfig": "config.HateSpeechScorerConfig",
+        "AutoModel": "scorer.HateSpeechScorer",
+        "AutoModelForSequenceClassification": "scorer.HateSpeechScorer",
+    }
 
     def __init__(
         self,
