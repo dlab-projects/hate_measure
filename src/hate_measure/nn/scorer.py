@@ -26,6 +26,8 @@ class HateSpeechScorer(PreTrainedModel):
         labels=None,
         **kwargs
     ):
+        # Remove Trainer-specific args that the encoder doesn't accept
+        kwargs.pop("num_items_in_batch", None)
         out = self.encoder(
             input_ids=input_ids,
             attention_mask=attention_mask,
