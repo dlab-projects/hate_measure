@@ -1,8 +1,16 @@
 import torch.nn as nn
 from transformers import AutoModel, PreTrainedModel
 from transformers.modeling_outputs import SequenceClassifierOutput
-from hate_measure.utils import masked_average_pooling
 from .config import HateSpeechScorerConfig
+
+
+def masked_average_pooling(hidden_states, attention_mask):
+    """Average pool hidden states, weighted by attention mask."""
+    masked_hidden_states = hidden_states * attention_mask.unsqueeze(-1)
+    sum_hidden_states = masked_hidden_states.sum(dim=1)
+    sum_mask = attention_mask.sum(dim=1, keepdim=True)
+    return sum_hidden_states / sum_mask
+
 
 class HateSpeechScorer(PreTrainedModel):
     config_class = HateSpeechScorerConfig
