@@ -10,17 +10,22 @@ class HateSpeechScorerConfig(PretrainedConfig):
 
     def __init__(
         self,
-        base_model_name="AnswerDotAI/ModernBERT-base",
+        encoder_model_name_or_path="AnswerDotAI/ModernBERT-base",
         n_dense=128,
         dropout_rate=0.4,
         num_labels=1,
+        encoder_config=None,
         **kwargs
     ):
-        super().__init__(num_labels=num_labels,**kwargs)
+        super().__init__(num_labels=num_labels, **kwargs)
         self.problem_type = "regression"
-        self.encoder_model_name_or_path = base_model_name
+        self.encoder_model_name_or_path = encoder_model_name_or_path
         self.n_dense = n_dense
         self.dropout_rate = dropout_rate
         self.id2label = {0: "score"}
         self.label2id = {"score": 0}
-        self.encoder_config = AutoConfig.from_pretrained(base_model_name)
+        # Use provided encoder_config (from saved config.json) or fetch fresh
+        if encoder_config is not None:
+            self.encoder_config = AutoConfig.from_pretrained(encoder_config["_name_or_path"])
+        else:
+            self.encoder_config = AutoConfig.from_pretrained(encoder_model_name_or_path)

@@ -65,7 +65,7 @@ def train(
         HuggingFace Hub model ID (e.g., "username/model-name"). Required if push_to_hub is True.
     """
     # Model
-    config = HateSpeechScorerConfig(base_model_name=base_model)
+    config = HateSpeechScorerConfig(encoder_model_name_or_path=base_model)
     model = HateSpeechScorer(config)
     tokenizer = AutoTokenizer.from_pretrained(config.encoder_model_name_or_path)
 

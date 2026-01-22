@@ -32,3 +32,8 @@ where = ["src"]
 
 [tool.uv]
 package = true
+
+[dependency-groups]
+dev = [
+    "ipython>=9.9.0",
+]
